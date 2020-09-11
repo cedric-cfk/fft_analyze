@@ -23,26 +23,31 @@ from machine import SD
 from machine import I2S
 from ulab import fft
 from ulab import vector
+from ulab import numerical
 import math
 import sys
 
 #======= USER CONFIGURATION =======
-RECORD_TIME_IN_MS = 10
+RECORD_TIME_IN_MS = 1000
 SAMPLE_RATE_IN_HZ = 4050
 #======= USER CONFIGURATION =======
 
 SAMPLE_SIZE_IN_BITS = 32
 SAMPLE_SIZE_IN_BYTES = SAMPLE_SIZE_IN_BITS // 8
 MIC_SAMPLE_BUFFER_SIZE_IN_BYTES = 4096
-NUM_SAMPLE_BYTES_TO_WRITE = int((RECORD_TIME_IN_MS / 1000) * SAMPLE_RATE_IN_HZ * SAMPLE_SIZE_IN_BYTES)
+NUM_SAMPLE_BYTES_TO_WRITE = int((RECORD_TIME_IN_MS / 1000) * SAMPLE_RATE_IN_HZ * SAMPLE_SIZE_IN_BYTES) # 32768 MAX!
 NUM_SAMPLES_IN_DMA_BUFFER = 256
 NUM_CHANNELS = 1
 
 #======= Analyzer Settings =======
-bins = 100
+BINS = 100
+START_AT_HZ = 0
+NUMBER_OF_BINS = 10
+
 
 # Calculate next higher power of 2 to NUM_SAMPLE_BYTES_TO_WRITE.
-print(NUM_SAMPLE_BYTES_TO_WRITE)
+print("Calculating next higher power of 2 to NUM_SAMPLE_BYTES_TO_WRITE:")
+print("NUM_SAMPLE_BYTES_TO_WRITE Before: \t", NUM_SAMPLE_BYTES_TO_WRITE)
 def bitLenCount(int_type):
     length = 0
     count = 0
@@ -51,13 +56,21 @@ def bitLenCount(int_type):
         length += 1
         int_type >>= 1
     return math.pow(2, length)
-SAMPLE_RATE_IN_HZ = int(bitLenCount(NUM_SAMPLE_BYTES_TO_WRITE) // (SAMPLE_SIZE_IN_BYTES * (RECORD_TIME_IN_MS / 1000)))
-NUM_SAMPLE_BYTES_TO_WRITE = int((RECORD_TIME_IN_MS / 1000) * SAMPLE_RATE_IN_HZ * SAMPLE_SIZE_IN_BYTES)
-print(NUM_SAMPLE_BYTES_TO_WRITE)
-
+NUM_SAMPLE_BYTES_TO_WRITE = int(bitLenCount(NUM_SAMPLE_BYTES_TO_WRITE))
+SAMPLE_RATE_IN_HZ = int(NUM_SAMPLE_BYTES_TO_WRITE // (SAMPLE_SIZE_IN_BYTES * (RECORD_TIME_IN_MS / 1000)))
+print("NUM_SAMPLE_BYTES_TO_WRITE After: \t", NUM_SAMPLE_BYTES_TO_WRITE)
+print()
 
 Fs = SAMPLE_RATE_IN_HZ#1230 # Sampling frequency
 T = 1/Fs                    # Sampling period
+
+L = NUM_SAMPLE_BYTES_TO_WRITE # Length of signal
+t = np.array(range(0,L))*T  # Time vector in ms
+
+f = Fs*np.array(range(0,(L//2)+1))/L
+
+bins = int(BINS / f[1])
+start_at_hz = int(START_AT_HZ / f[1])
 
 
 # I2S pins
@@ -99,12 +112,11 @@ for i in range(1, 6):
 
     # allocate sample arrays
     #   memoryview used to reduce heap allocation in while loop
-    print((sys.maxsize//2))
-    mic_samples = bytearray(4096)
+
+    mic_samples = bytearray(NUM_SAMPLE_BYTES_TO_WRITE)
     mic_samples_mv = memoryview(mic_samples)
     #store_samples = bytearray(41823)
     #store_samples_mv = memoryview(store_samples)
-    print(list(mic_samples_mv[:2]))
 
     num_sample_bytes_written = 0
 
@@ -121,12 +133,12 @@ for i in range(1, 6):
         try:
             # try to read a block of samples from the I2S microphone
             # readinto() method returns 0 if no DMA buffer is full
-            start_time_2 = utime.ticks_ms()
-            num_bytes_read_from_mic = audio_in.readinto(mic_samples_mv, timeout=RECORD_TIME_IN_MS)
-            print(utime.ticks_ms() - start_time_2, "ms")
+            #start_time_2 = utime.ticks_ms()
+            num_bytes_read_from_mic = audio_in.readinto(mic_samples_mv, timeout=-1)
+            #print("Audio in: \t", utime.ticks_ms() - start_time_2, "ms")
 
-            print(len(list(mic_samples_mv)))
-            print(num_bytes_read_from_mic)
+            #print(len(list(mic_samples_mv)))
+            #print(num_bytes_read_from_mic)
 
             #if(num_bytes_read_from_mic > 0)
 
@@ -134,23 +146,9 @@ for i in range(1, 6):
 
                 #num_sample_bytes_written += num_bytes_read_from_mic
 
-            if start:
-                start = False
-            else:
-                #print('Test:')
-                #print(mic_samples[num_bytes_read_from_mic-20:num_bytes_read_from_mic-1])
-                #print(mic_samples[num_bytes_read_from_mic:num_bytes_read_from_mic+500])
-                print()
-
-            '''
-            if num_bytes_read_from_mic > 0:
-                L = num_bytes_read_from_mic # Length of signal
-                t = np.array(range(0,L))*T  # Time vector in ms
-
-                f = Fs*np.array(range(0,(L//2)+1))/L
-
+            if num_bytes_read_from_mic == NUM_SAMPLE_BYTES_TO_WRITE:
                 #calculate fft
-                print(num_bytes_read_from_mic)
+                #print("if")
                 try:
                     real, imaginary = fft.fft(np.array(list(mic_samples_mv[:num_bytes_read_from_mic])))
                     print('fft finished')
@@ -161,31 +159,31 @@ for i in range(1, 6):
                     P1 = P2[:L//2+1]
 
                     P1[1:(P1.size() - 1)] = 2*P1[1:(P1.size() - 1)]
-                    print(P1)
-                    print(P1.size())
-
-                    print(f.size())
+                    #print(P1)
+                    #print(P1.size())
+                    #print(P1[P1.size() - 10:P1.size() - 1])
+                    #print(f.size())
                     result = []
-                    bins = int(bins / f[1])
-                    print('Bins: \t', bins)
-                    for x in range(0,10):
-                        min = (bins*x)
-                        max = ((bins*(x+1)) - 1)
-                        print(max)
+                    #print('Bins: \t', bins)
+                    for x in range(0,NUMBER_OF_BINS):
+                        min = (start_at_hz + bins * x)
+                        max = (start_at_hz + (bins*(x+1)) - 1)
+                        #print(max)
                         if max < P1.size():
-                            ar = P1[min:max]
-                            sda = numerical.max(ar)
-                            result += [sda]
+                            rang = P1[min:max]
+                            max = numerical.max(rang)
+                            result += [max]
                         elif min < P1.size():
-                            ar = P1[min:P1.size()-1]
-                            sda = numerical.max(ar)
-                            result += [sda]
+                            rang = P1[min:P1.size()-1]
+                            max = numerical.max(rang)
+                            result += [max]
                         else:
                             result += [0]
+                    print("result: \t", result)
                     num_sample_bytes_written += num_bytes_read_from_mic
                 except ValueError:
-                    pass
-                    '''
+                    print("Value Error! is NUM_SAMPLE_BYTES_TO_WRITE power of 2?")
+
         except (KeyboardInterrupt, Exception) as e:
             print('caught exception {} {}'.format(type(e).__name__, e))
             audio_in.deinit()
@@ -199,7 +197,7 @@ for i in range(1, 6):
     #os.umount("/sd")
     #sd.deinit()
 
-    print('#'+str(i)+' ... done! -- %d sample bytes written to txt file' % num_sample_bytes_written)
+    print('#'+str(i)+' ... done! -- %d sample bytes' % num_sample_bytes_written)
     print()
 
     # make the LED light up in green color
@@ -209,7 +207,7 @@ for i in range(1, 6):
 
     #time.sleep(2)
 # do not deinit audio in case you will record an other round
-
+audio_in.deinit()
 print('All done!')
 
 print('Time needed for all calculations: \t', total_time, 'milliseconds\nAverage Time needed: \t', (total_time/5), 'milliseconds')
