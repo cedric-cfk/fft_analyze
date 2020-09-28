@@ -155,10 +155,10 @@ for i in range(1, 6):
                     real = real/L
                     imaginary = imaginary/L
                     P2 = vector.sqrt(real*real + imaginary*imaginary)
+                    print('average power: ', P2[0])
+                    P1 = P2[1:L//2+1]
 
-                    P1 = P2[:L//2+1]
-
-                    P1[1:(P1.size() - 1)] = 2*P1[1:(P1.size() - 1)]
+                    P1[:(P1.size() - 1)] = 2*P1[:(P1.size() - 1)]
                     #print(P1)
                     #print(P1.size())
                     #print(P1[P1.size() - 10:P1.size() - 1])
