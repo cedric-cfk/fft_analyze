@@ -40,7 +40,7 @@ NUM_SAMPLES_IN_DMA_BUFFER = 256
 NUM_CHANNELS = 1
 
 #======= Analyzer Settings =======
-BINS = 10
+BIN_SIZE_IN_HZ = 100
 START_AT_HZ = 0
 NUMBER_OF_BINS = 10
 
@@ -58,18 +58,18 @@ def bitLenCount(int_type):
     return math.pow(2, length)
 NUM_SAMPLE_BYTES_TO_WRITE = int(bitLenCount(NUM_SAMPLE_BYTES_TO_WRITE))
 SAMPLE_RATE_IN_HZ = int(NUM_SAMPLE_BYTES_TO_WRITE // (SAMPLE_SIZE_IN_BYTES * (RECORD_TIME_IN_MS / 1000)))
-print("NUM_SAMPLE_BYTES_TO_WRITE After: \t", NUM_SAMPLE_BYTES_TO_WRITE)
+print("NUM_SAMPLE_BYTES_TO_WRITE New: \t\t", NUM_SAMPLE_BYTES_TO_WRITE)
+print("SAMPLE_RATE_IN_HZ New: \t\t\t", SAMPLE_RATE_IN_HZ)
 print()
 
 Fs = SAMPLE_RATE_IN_HZ#1230 # Sampling frequency
 T = 1/Fs                    # Sampling period
 
 L = NUM_SAMPLE_BYTES_TO_WRITE # Length of signal
-#t = np.array(range(0,L))*T  # Time vector in ms
 
 f = Fs*np.array(range(0,(L//2)+1))/L
 
-bins = int(BINS / f[1])
+bins = int(BIN_SIZE_IN_HZ / f[1])
 start_at_hz = int(START_AT_HZ / f[1])
 
 
@@ -212,8 +212,8 @@ for i in range(1, 6):
                             result += [max]
                         elif min < P1.size():
                             rang = P1[min:P1.size()-1]
-                            #max = numerical.max(rang)
-                            max = sum(rang) / len(rang)
+                            max = numerical.max(rang) # max
+                            #max = sum(rang) / len(rang) # average
                             result += [max]
                         else:
                             result += [0]
@@ -235,7 +235,7 @@ for i in range(1, 6):
                 num_bytes_written = wav.write(wav_samples_mv[:num_bytes_snipped])
 
                 wav.close()
-                print("Done Writing to wav.")
+                print("Done Writing wav to sd.")
         except (KeyboardInterrupt, Exception) as e:
             print('caught exception {} {}'.format(type(e).__name__, e))
             print(e)
