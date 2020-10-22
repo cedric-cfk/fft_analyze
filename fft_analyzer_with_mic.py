@@ -97,7 +97,7 @@ def combine_samples(samples):
     result = []
     for i in range(num_samples):
         #print(i)
-        result += [samples[4 * i] + samples[4 * i + 1] + samples[4 * i + 2] + samples[4 * i + 3]]
+        result += [samples[4 * i] * math.pow(2, 24) + samples[4 * i + 1] * math.pow(2, 16) + samples[4 * i + 2] * math.pow(2, 8) + samples[4 * i + 3]]
     return np.array(result)
 
 # configure SD card
