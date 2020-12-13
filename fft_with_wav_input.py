@@ -12,7 +12,7 @@ import sys
 
 
 #======= USER CONFIGURATION =======
-WAV_FILE = 'mic-recording_5.wav' # File Name, relativ to sd/audio.
+WAV_FILE = 'mic-recording_5.wav' # File Name, relative to sd/audio.
 SAMPLE_RATE_IN_HZ = 4050 # Same as in the recording
 RECORD_TIME_IN_MS = 1000 # Same as in the recording(But in ms not seconds)
 #======= USER CONFIGURATION =======
