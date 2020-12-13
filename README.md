@@ -11,4 +11,4 @@ SAMPLE_RATE_IN_HZ = 4050 # Same as in the recording
 RECORD_TIME_IN_MS = 1000 # Same as in the recording(But in ms not seconds)
 ```
 
-:warning: **Caution!!** If the number 'NUM_SAMPLE_BYTES_TO_WRITE After:' on your command line is greater than 32768, the program will fail.
+> **Caution!!** If the number 'NUM_SAMPLE_BYTES_TO_WRITE After:' on your command line is greater than 32768, the program will fail.
